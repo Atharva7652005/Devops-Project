@@ -1,0 +1,135 @@
+.profile-card {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.profile-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.profile-section:last-child {
+  border-bottom: none;
+}
+
+.profile-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 1rem;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .profile-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: var(--gray-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+}
+
+.toggle-label {
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.toggle-desc {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+/* Review Cards */
+.review-card {
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 1rem;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.review-rating {
+  display: flex;
+  color: var(--gold-500);
+  gap: 0.25rem;
+}
+
+.review-date {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.review-comment {
+  color: var(--gray-700);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* File Upload */
+.upload-zone {
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  text-align: center;
+  background-color: var(--gray-50);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upload-zone:hover {
+  border-color: var(--blue-500);
+  background-color: var(--blue-50);
+}
+
+.upload-icon {
+  color: var(--gray-400);
+  margin-bottom: 0.5rem;
+}
+
+.attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background-color: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+}
+
+.attachment-link {
+  color: var(--blue-600);
+  font-size: 0.875rem;
+  text-decoration: underline;
+}

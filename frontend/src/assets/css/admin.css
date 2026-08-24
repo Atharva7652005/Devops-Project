@@ -1,0 +1,209 @@
+.admin-badge {
+  background-color: var(--blue-50);
+  color: var(--blue-700);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--blue-100);
+}
+
+.admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+  .admin-metrics {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.admin-metric-card {
+  padding: 1.25rem;
+  background-color: white;
+  border-left: 4px solid;
+}
+
+.admin-metric-card-yellow {
+  border-left-color: #fbbf24; /* yellow-400 */
+}
+
+.admin-metric-card-blue {
+  border-left-color: var(--blue-500);
+}
+
+.admin-metric-card-green {
+  border-left-color: #22c55e; /* green-500 */
+}
+
+.admin-metric-card-gold {
+  border-left-color: var(--gold-500);
+}
+
+.admin-metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.admin-metric-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  margin-bottom: 0.25rem;
+}
+
+.admin-metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.admin-metric-icon {
+  padding: 0.5rem;
+  border-radius: var(--radius-lg);
+}
+
+.icon-yellow {
+  background-color: #fefce8; /* yellow-50 */
+  color: #ca8a04; /* yellow-600 */
+}
+
+.icon-blue {
+  background-color: var(--blue-50);
+  color: var(--blue-600);
+}
+
+.icon-green {
+  background-color: #f0fdf4; /* green-50 */
+  color: #16a34a; /* green-600 */
+}
+
+.icon-gold {
+  background-color: var(--gold-50);
+  color: var(--gold-600);
+}
+
+.admin-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .admin-filters {
+    flex-direction: row;
+    width: auto;
+  }
+}
+
+.filter-group {
+  position: relative;
+}
+
+.filter-input {
+  padding-left: 2.25rem;
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .filter-input {
+    width: 10rem;
+  }
+}
+
+.filter-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.625rem;
+  color: var(--gray-400);
+}
+
+.admin-table-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.admin-table-title-icon {
+  color: var(--blue-600);
+}
+
+/* Edit Mode styling */
+.edit-row {
+  background-color: rgba(59, 130, 246, 0.05); /* blue-50 with opacity */
+}
+
+.edit-select, .edit-input, .edit-textarea {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  margin-top: 0.25rem;
+}
+
+.edit-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  display: block;
+}
+
+.edit-textarea {
+  height: 5rem;
+  resize: none;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn-save {
+  padding: 0.375rem;
+  background-color: #dcfce7; /* green-100 */
+  color: #15803d; /* green-700 */
+  border-radius: var(--radius);
+}
+
+.btn-save:hover {
+  background-color: #bbf7d0; /* green-200 */
+}
+
+.btn-cancel-edit {
+  padding: 0.375rem;
+  background-color: var(--gray-100);
+  color: var(--gray-700);
+  border-radius: var(--radius);
+}
+
+.btn-cancel-edit:hover {
+  background-color: var(--gray-200);
+}
+
+.admin-notes {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-style: italic;
+}
+
+.admin-notes-empty {
+  color: var(--gray-400);
+}

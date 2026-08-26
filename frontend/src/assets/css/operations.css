@@ -1,0 +1,80 @@
+.operations-page {
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.operations-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  color: var(--gold-600);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.operations-heading-icon { color: var(--gold-500); }
+
+.operations-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 1.5rem;
+}
+
+.operations-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: var(--gray-600);
+  border-bottom: 2px solid transparent;
+}
+
+.operations-tab.active {
+  color: var(--blue-700);
+  border-bottom-color: var(--blue-600);
+}
+
+.operations-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-lg);
+}
+
+.operations-notice.success { color: #166534; background: #dcfce7; }
+.operations-notice.error { color: #991b1b; background: #fee2e2; }
+
+.operations-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.operations-panel { padding: 1.5rem; }
+.panel-title { display: flex; align-items: center; gap: 0.5rem; color: var(--blue-950); }
+.panel-title h2 { font-size: 1.125rem; }
+.panel-copy { color: var(--gray-600); margin: 0.75rem 0 1.25rem; }
+.operations-form { display: flex; flex-direction: column; gap: 1rem; }
+.operations-form .label-text { display: flex; flex-direction: column; }
+.operations-form .input-field { margin-top: 0.25rem; }
+.history-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--gray-100); }
+.history-row div { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.history-row strong { overflow-wrap: anywhere; }
+.history-row span:not(.status-badge) { color: var(--gray-500); font-size: 0.75rem; }
+.history-empty, .operations-loading { color: var(--gray-500); padding: 1rem 0; }
+
+@media (max-width: 767px) {
+  .operations-heading { gap: 1rem; }
+  .operations-grid { grid-template-columns: 1fr; }
+  .operations-tabs { overflow-x: auto; }
+  .operations-tab { white-space: nowrap; }
+}

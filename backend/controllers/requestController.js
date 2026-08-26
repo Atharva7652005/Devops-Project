@@ -13,12 +13,20 @@ const createRequest = asyncHandler(async (req, res) => {
     throw new Error('Please provide all required fields');
   }
 
+  const attachments = [];
+  if (req.files && req.files.length > 0) {
+    req.files.forEach(file => {
+      attachments.push(`/uploads/${file.filename}`);
+    });
+  }
+
   const request = new ServiceRequest({
     user: req.user._id,
     category,
     title,
     description,
     preferredDate,
+    attachments,
   });
 
   const createdRequest = await request.save();
@@ -29,7 +37,9 @@ const createRequest = asyncHandler(async (req, res) => {
 // @route   GET /api/requests/my-requests
 // @access  Private (Customer)
 const getMyRequests = asyncHandler(async (req, res) => {
-  const requests = await ServiceRequest.find({ user: req.user._id }).sort({ createdAt: -1 });
+  const requests = await ServiceRequest.find({ user: req.user._id })
+    .populate('technician', 'name specialization contactInfo')
+    .sort({ createdAt: -1 });
   res.json(requests);
 });
 
@@ -179,6 +189,7 @@ const uploadAttachment = asyncHandler(async (req, res) => {
   }
 
   if (!req.file) {
+    console.error('File upload failed: req.file is undefined. Check multer config or incoming formData.');
     res.status(400);
     throw new Error('No file uploaded');
   }

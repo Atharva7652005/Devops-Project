@@ -37,6 +37,7 @@ const Navbar = () => {
                   {user.role}
                 </span>
               </span>
+              <Link to="/operations" className="navbar-operations-link">Operations</Link>
               <button
                 onClick={handleLogout}
                 className="navbar-logout-btn"

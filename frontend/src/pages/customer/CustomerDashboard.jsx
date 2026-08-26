@@ -6,12 +6,13 @@ import '../../assets/css/dashboard.css';
 import '../../assets/css/profile.css';
 
 const CustomerDashboard = () => {
-  const { user, login } = useContext(AuthContext); // needed to update local user state if profile changes
+  const { user, login, updateUser } = useContext(AuthContext); // needed to update local user state if profile changes
   const [activeTab, setActiveTab] = useState('requests'); // 'requests', 'profile', 'reviews'
   
-  // Dashboard State
   const [requests, setRequests] = useState([]);
+  const [catalogOptions, setCatalogOptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   
   // Modal States
   const [showReqModal, setShowReqModal] = useState(false);
@@ -21,8 +22,8 @@ const CustomerDashboard = () => {
   const [selectedReqForAction, setSelectedReqForAction] = useState(null);
 
   // Form States
-  const [reqForm, setReqForm] = useState({ category: 'Appliance', title: '', description: '', preferredDate: '' });
-  const [profileForm, setProfileForm] = useState({ name: '', phone: '', address: '', emailNotif: true, smsNotif: false });
+  const [reqForm, setReqForm] = useState({ category: '', title: '', description: '', preferredDate: '', attachments: [] });
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '', address: '', city: '', pincode: '', emailNotif: true, smsNotif: false });
   const [rescheduleForm, setRescheduleForm] = useState({ requestedDate: '', reason: '' });
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
 
@@ -33,18 +34,36 @@ const CustomerDashboard = () => {
     } catch (error) {
       console.error('Error fetching requests', error);
       setRequests([]);
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchCatalog = async () => {
+    try {
+      const res = await axios.get('/admin/catalog');
+      setCatalogOptions(res.data);
+      if (res.data.length > 0) {
+        setReqForm(prev => ({...prev, category: prev.category || res.data[0].name}));
+      }
+    } catch (error) {
+      console.error('Error fetching catalog', error);
     }
   };
 
   useEffect(() => {
-    fetchRequests();
+    const initData = async () => {
+      setLoading(true);
+      await fetchCatalog();
+      await fetchRequests();
+      setLoading(false);
+    };
+    initData();
     if (user) {
       setProfileForm({
         name: user.name || '',
         phone: user.phone || '',
         address: user.address || '',
+        city: user.city || '',
+        pincode: user.pincode || '',
         emailNotif: user.notifications?.email ?? true,
         smsNotif: user.notifications?.sms ?? false,
       });
@@ -59,11 +78,16 @@ const CustomerDashboard = () => {
         name: profileForm.name,
         phone: profileForm.phone,
         address: profileForm.address,
+        city: profileForm.city,
+        pincode: profileForm.pincode,
         notifications: { email: profileForm.emailNotif, sms: profileForm.smsNotif }
       });
-      // Update local storage via context is tricky if we don't expose setUser, 
-      // but we can just reload or rely on the user object updating next login.
-      // For simplicity, we just alert success.
+      if (updateUser && res.data) {
+        // update local storage and context so it persists on refresh
+        // we must preserve the token which isn't returned by /profile but might be in user context
+        updateUser({ ...user, ...res.data }); 
+      }
+      setIsEditingProfile(false);
       alert('Profile updated successfully!');
     } catch (err) {
       alert('Error updating profile');
@@ -77,7 +101,17 @@ const CustomerDashboard = () => {
       if (editingRequest) {
         await axios.put(`/requests/${editingRequest._id}`, reqForm);
       } else {
-        await axios.post('/requests', reqForm);
+        if (reqForm.attachments && reqForm.attachments.length > 0) {
+          const formData = new FormData();
+          formData.append('category', reqForm.category);
+          formData.append('title', reqForm.title);
+          formData.append('description', reqForm.description);
+          formData.append('preferredDate', reqForm.preferredDate);
+          Array.from(reqForm.attachments).forEach(file => formData.append('attachments', file));
+          await axios.post('/requests', formData);
+        } else {
+          await axios.post('/requests', reqForm);
+        }
       }
       setShowReqModal(false);
       fetchRequests();
@@ -104,9 +138,7 @@ const CustomerDashboard = () => {
     formData.append('attachment', file);
     
     try {
-      await axios.post(`/requests/${reqId}/attachments`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await axios.post(`/requests/${reqId}/attachments`, formData);
       fetchRequests();
     } catch (err) {
       alert('Error uploading file');
@@ -189,7 +221,7 @@ const CustomerDashboard = () => {
               <button 
                 onClick={() => {
                   setEditingRequest(null);
-                  setReqForm({ category: 'Appliance', title: '', description: '', preferredDate: '' });
+                  setReqForm({ category: catalogOptions.length > 0 ? catalogOptions[0].name : '', title: '', description: '', preferredDate: '', attachments: [] });
                   setShowReqModal(true);
                 }}
                 className="btn btn-primary"
@@ -244,7 +276,15 @@ const CustomerDashboard = () => {
                           </td>
                           <td style={{verticalAlign: 'top'}}>
                             <span className={getStatusClass(req.status)}>{getStatusIcon(req.status)} {req.status}</span>
-                            <div className="item-tech" style={{marginTop: '0.5rem'}}>Tech: {req.assignedTechnician}</div>
+                            {req.technician ? (
+                              <div className="item-tech" style={{marginTop: '0.5rem', background: 'var(--blue-50)', padding: '0.5rem', borderRadius: '4px'}}>
+                                <div style={{fontWeight: 500, color: 'var(--blue-800)'}}>👨‍🔧 {req.technician.name}</div>
+                                <div style={{fontSize: '0.75rem', color: 'var(--gray-600)'}}>{req.technician.specialization}</div>
+                                <div style={{fontSize: '0.75rem', color: 'var(--gray-600)'}}>{req.technician.contactInfo}</div>
+                              </div>
+                            ) : (
+                              <div className="item-tech" style={{marginTop: '0.5rem'}}>Tech: {req.assignedTechnician}</div>
+                            )}
                           </td>
                           <td style={{verticalAlign: 'top'}}>
                             <div className="item-date">Pref: {new Date(req.preferredDate).toLocaleDateString()}</div>
@@ -283,7 +323,7 @@ const CustomerDashboard = () => {
                                     try {
                                       dateStr = req.preferredDate ? new Date(req.preferredDate).toISOString().split('T')[0] : '';
                                     } catch (e) {}
-                                    setReqForm({ category: req.category, title: req.title, description: req.description, preferredDate: dateStr });
+                                    setReqForm({ category: req.category, title: req.title, description: req.description, preferredDate: dateStr, attachments: [] });
                                     setShowReqModal(true);
                                   }} className="action-btn" title="Edit"><Edit2 size={16} /></button>
                                   
@@ -319,42 +359,64 @@ const CustomerDashboard = () => {
           <div className="card profile-card">
             <div className="profile-section">
               <h2 className="profile-section-title">Personal Information</h2>
-              <form onSubmit={handleProfileSubmit} className="profile-grid">
+              <form onSubmit={(e) => {
+                if (!isEditingProfile) {
+                  e.preventDefault();
+                  setIsEditingProfile(true);
+                } else {
+                  handleProfileSubmit(e);
+                }
+              }} className="profile-grid">
                 <div className="form-group">
                   <label className="label-text">Full Name</label>
-                  <input type="text" className="input-field" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} required />
+                  <input type="text" className="input-field" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} required disabled={!isEditingProfile} />
                 </div>
                 <div className="form-group">
                   <label className="label-text">Phone Number</label>
-                  <input type="text" className="input-field" value={profileForm.phone} onChange={e => setProfileForm({...profileForm, phone: e.target.value})} placeholder="+91 ..." />
+                  <input type="text" className="input-field" value={profileForm.phone} onChange={e => setProfileForm({...profileForm, phone: e.target.value})} placeholder="+91 ..." disabled={!isEditingProfile} />
                 </div>
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label className="label-text">Service / Shipping Address</label>
-                  <textarea className="input-field" value={profileForm.address} onChange={e => setProfileForm({...profileForm, address: e.target.value})} rows="3"></textarea>
+                  <textarea className="input-field" value={profileForm.address} onChange={e => setProfileForm({...profileForm, address: e.target.value})} rows="3" disabled={!isEditingProfile}></textarea>
+                </div>
+                <div className="form-group">
+                  <label className="label-text">City</label>
+                  <input type="text" className="input-field" value={profileForm.city} onChange={e => setProfileForm({...profileForm, city: e.target.value})} placeholder="e.g. Mumbai" disabled={!isEditingProfile} />
+                </div>
+                <div className="form-group">
+                  <label className="label-text">Pincode</label>
+                  <input type="text" className="input-field" value={profileForm.pincode} onChange={e => setProfileForm({...profileForm, pincode: e.target.value})} placeholder="e.g. 400001" disabled={!isEditingProfile} />
                 </div>
 
                 <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
                   <h3 className="profile-section-title" style={{fontSize: '1rem'}}>Notification Preferences</h3>
                   <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                    <label className="toggle-container">
+                    <label className="toggle-container" style={{opacity: isEditingProfile ? 1 : 0.6}}>
                       <div>
                         <div className="toggle-label">Email Notifications</div>
                         <div className="toggle-desc">Receive updates about your requests via email.</div>
                       </div>
-                      <input type="checkbox" checked={profileForm.emailNotif} onChange={e => setProfileForm({...profileForm, emailNotif: e.target.checked})} />
+                      <input type="checkbox" checked={profileForm.emailNotif} onChange={e => setProfileForm({...profileForm, emailNotif: e.target.checked})} disabled={!isEditingProfile} />
                     </label>
-                    <label className="toggle-container">
+                    <label className="toggle-container" style={{opacity: isEditingProfile ? 1 : 0.6}}>
                       <div>
                         <div className="toggle-label">SMS Notifications</div>
                         <div className="toggle-desc">Receive updates about your requests via SMS.</div>
                       </div>
-                      <input type="checkbox" checked={profileForm.smsNotif} onChange={e => setProfileForm({...profileForm, smsNotif: e.target.checked})} />
+                      <input type="checkbox" checked={profileForm.smsNotif} onChange={e => setProfileForm({...profileForm, smsNotif: e.target.checked})} disabled={!isEditingProfile} />
                     </label>
                   </div>
                 </div>
 
-                <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                  <button type="submit" className="btn btn-primary">Save Changes</button>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '1rem', gap: '1rem' }}>
+                  {isEditingProfile ? (
+                    <>
+                      <button type="button" className="btn-cancel" onClick={() => setIsEditingProfile(false)}>Cancel</button>
+                      <button type="submit" className="btn btn-primary">Save Changes</button>
+                    </>
+                  ) : (
+                    <button type="submit" className="btn btn-primary"><Edit2 size={16} style={{display: 'inline', marginRight: '0.5rem'}} /> Edit Profile</button>
+                  )}
                 </div>
               </form>
             </div>
@@ -373,16 +435,24 @@ const CustomerDashboard = () => {
             <div className="modal-body">
               <form onSubmit={handleReqSubmit} className="modal-form">
                 {!editingRequest && (
-                  <div>
-                    <label className="label-text">Category</label>
-                    <select className="input-field" value={reqForm.category} onChange={e => setReqForm({...reqForm, category: e.target.value})}>
-                      <option>Appliance</option>
-                      <option>Vehicle</option>
-                      <option>Electronics</option>
-                      <option>Plumbing</option>
-                      <option>Other</option>
-                    </select>
-                  </div>
+                  <>
+                    <div>
+                      <label className="label-text">Category</label>
+                      <select className="input-field" value={reqForm.category} onChange={e => {
+                        const selectedCat = catalogOptions.find(c => c.name === e.target.value);
+                        setReqForm({...reqForm, category: e.target.value, title: selectedCat ? selectedCat.name : ''});
+                      }}>
+                        {catalogOptions.length === 0 && <option value="">No services available</option>}
+                        {catalogOptions.map(cat => (
+                          <option key={cat._id} value={cat.name}>{cat.name} (Base: ₹{cat.basePrice})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label-text">Attachments (Optional)</label>
+                      <input type="file" multiple className="input-field" style={{padding: '0.3rem'}} onChange={e => setReqForm({...reqForm, attachments: e.target.files})} />
+                    </div>
+                  </>
                 )}
                 <div>
                   <label className="label-text">Title</label>

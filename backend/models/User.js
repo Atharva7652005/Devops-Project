@@ -29,6 +29,14 @@ const userSchema = mongoose.Schema(
       type: String,
       default: '',
     },
+    city: {
+      type: String,
+      default: '',
+    },
+    pincode: {
+      type: String,
+      default: '',
+    },
     notifications: {
       email: { type: Boolean, default: true },
       sms: { type: Boolean, default: false },
@@ -48,9 +56,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 // Encrypt password before saving
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
-    next();
+    return;
   }
 
   const salt = await bcrypt.genSalt(10);

@@ -29,7 +29,7 @@ const upload = multer({
   limits: { fileSize: 5000000 }, // 5MB limit
 });
 
-router.route('/').post(protect, createRequest);
+router.route('/').post(protect, upload.array('attachments', 5), createRequest);
 router.route('/my-requests').get(protect, getMyRequests);
 router
   .route('/:id')

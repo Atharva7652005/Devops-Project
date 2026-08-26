@@ -14,6 +14,8 @@ const getUserProfile = asyncHandler(async (req, res) => {
       email: user.email,
       phone: user.phone,
       address: user.address,
+      city: user.city,
+      pincode: user.pincode,
       notifications: user.notifications,
       role: user.role,
     });
@@ -33,6 +35,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     user.name = req.body.name || user.name;
     user.phone = req.body.phone !== undefined ? req.body.phone : user.phone;
     user.address = req.body.address !== undefined ? req.body.address : user.address;
+    user.city = req.body.city !== undefined ? req.body.city : user.city;
+    user.pincode = req.body.pincode !== undefined ? req.body.pincode : user.pincode;
     
     if (req.body.notifications) {
       user.notifications.email = req.body.notifications.email !== undefined ? req.body.notifications.email : user.notifications.email;
@@ -51,6 +55,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
       email: updatedUser.email,
       phone: updatedUser.phone,
       address: updatedUser.address,
+      city: updatedUser.city,
+      pincode: updatedUser.pincode,
       notifications: updatedUser.notifications,
       role: updatedUser.role,
     });

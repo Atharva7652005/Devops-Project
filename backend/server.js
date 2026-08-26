@@ -9,12 +9,20 @@ const profileRoutes = require('./routes/profileRoutes');
 const requestRoutes = require('./routes/requestRoutes');
 const catalogRoutes = require('./routes/catalogRoutes');
 const technicianRoutes = require('./routes/technicianRoutes');
-const promoRoutes = require('./routes/promoRoutes');
+
 const adminRoutes = require('./routes/adminRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const path = require('path');
+const fs = require('fs');
 
 const port = process.env.PORT || 5000;
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
 
 // Connect to database
 connectDB();
@@ -33,10 +41,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', profileRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/catalog', catalogRoutes);
 app.use('/api/admin/technicians', technicianRoutes);
-app.use('/api/admin/promos', promoRoutes);
-app.use('/api/admin/requests', adminRoutes); // Using adminRoutes for base admin routes
+
+app.use('/api/admin', adminRoutes); // Using adminRoutes for base admin routes
 
 // Error Handling Middleware
 app.use(errorHandler);

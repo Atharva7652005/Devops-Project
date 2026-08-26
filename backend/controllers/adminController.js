@@ -15,7 +15,8 @@ const getAllRequests = asyncHandler(async (req, res) => {
   if (category) filter.category = category;
 
   const requests = await ServiceRequest.find(filter)
-    .populate('user', 'id name email phone')
+    .populate('user', 'id name email phone address city pincode isBlocked')
+    .populate('technician', 'name specialization contactInfo')
     .sort({ createdAt: -1 });
 
   res.json(requests);
@@ -32,10 +33,11 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
     throw new Error('Request not found');
   }
 
-  const { status, assignedTechnician, estimatedCost } = req.body;
+  const { status, assignedTechnician, technician, estimatedCost } = req.body;
 
   if (status) request.status = status;
   if (assignedTechnician !== undefined) request.assignedTechnician = assignedTechnician;
+  if (technician !== undefined) request.technician = technician || null; // allow unsetting
   if (estimatedCost !== undefined) request.estimatedCost = estimatedCost;
 
   const updatedRequest = await request.save();

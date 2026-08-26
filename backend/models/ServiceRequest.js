@@ -10,7 +10,6 @@ const serviceRequestSchema = mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ['Appliance', 'Vehicle', 'Electronics', 'Plumbing', 'Other'],
     },
     title: {
       type: String,
@@ -37,6 +36,11 @@ const serviceRequestSchema = mongoose.Schema(
       type: String,
       default: 'Unassigned',
     },
+    technician: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Technician',
+      default: null,
+    },
     estimatedCost: {
       type: Number,
       default: 0,
@@ -60,13 +64,6 @@ const serviceRequestSchema = mongoose.Schema(
         dateRequested: { type: Date, default: Date.now }
       }
     ],
-    appliedPromoCode: {
-      type: String,
-    },
-    discountAmount: {
-      type: Number,
-      default: 0,
-    },
   },
   {
     timestamps: true,

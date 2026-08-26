@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import OperationsCenter from './pages/OperationsCenter';
 
 function App() {
   return (
@@ -21,8 +22,9 @@ function App() {
               <Route path="/register" element={<Register />} />
 
               {/* Customer Routes */}
-              <Route element={<ProtectedRoute adminOnly={false} />}>
+              <Route element={<ProtectedRoute adminOnly={false} allowAdmin />}>
                 <Route path="/dashboard" element={<CustomerDashboard />} />
+                <Route path="/operations" element={<OperationsCenter />} />
               </Route>
 
               {/* Admin Routes */}

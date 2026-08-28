@@ -24,8 +24,6 @@
     mongo_container: repairhub-mongodb
     backend_container: repairhub-backend
     frontend_container: repairhub-frontend
-    nginx_container: repairhub-nginx
-
     mongo_volume: repairhub-mongo-data
 
 
@@ -282,43 +280,8 @@
         networks:
           - name: "{{ docker_network }}"
 
-        exposed_ports:
-          - "80"
-
-
-    # ==================================================
-    # 17. REMOVE OLD NGINX CONTAINER
-    # ==================================================
-
-    - name: Remove existing Nginx container
-      community.docker.docker_container:
-        name: "{{ nginx_container }}"
-        state: absent
-
-
-    # ==================================================
-    # 18. START NGINX
-    # ==================================================
-
-    - name: Start Nginx reverse proxy
-      community.docker.docker_container:
-
-        name: "{{ nginx_container }}"
-
-        image: "nginx:alpine"
-
-        state: started
-
-        restart_policy: unless-stopped
-
-        networks:
-          - name: "{{ docker_network }}"
-
         published_ports:
           - "80:80"
-
-        volumes:
-          - "{{ app_dir }}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
 
 
     # ==================================================

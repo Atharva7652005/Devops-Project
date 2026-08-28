@@ -9,7 +9,9 @@
     # ==================================================
 
     app_dir: /opt/repairhub
+
     repo_url: "https://github.com/Atharva7652005/Devops-Project.git"
+
     branch: main
 
 
@@ -18,9 +20,12 @@
     # ==================================================
 
     docker_network: repairhub-network
+
     mongo_container: repairhub-mongodb
     backend_container: repairhub-backend
     frontend_container: repairhub-frontend
+    nginx_container: repairhub-nginx
+
     mongo_volume: repairhub-mongo-data
 
 
@@ -148,14 +153,21 @@
 
     - name: Start MongoDB container
       community.docker.docker_container:
+
         name: "{{ mongo_container }}"
+
         image: "mongo:8"
+
         state: started
+
         restart_policy: unless-stopped
+
         networks:
           - name: "{{ docker_network }}"
+
         volumes:
           - "{{ mongo_volume }}:/data/db"
+
         env:
           MONGO_INITDB_ROOT_USERNAME: "{{ mongo_username }}"
           MONGO_INITDB_ROOT_PASSWORD: "{{ mongo_password }}"
@@ -177,9 +189,13 @@
 
     - name: Build RepairHub backend Docker image
       community.docker.docker_image:
+
         name: repairhub-backend
+
         tag: latest
+
         source: build
+
         build:
           path: "{{ app_dir }}/backend"
 
@@ -190,19 +206,33 @@
 
     - name: Start RepairHub backend container
       community.docker.docker_container:
+
         name: "{{ backend_container }}"
+
         image: "repairhub-backend:latest"
+
         state: started
+
         restart_policy: unless-stopped
+
         networks:
           - name: "{{ docker_network }}"
+
         env:
+
           NODE_ENV: "production"
+
           PORT: "5000"
+
           MONGO_URI: >-
             mongodb://{{ mongo_username }}:{{ mongo_password }}@{{ mongo_container }}:27017/{{ mongo_database }}?authSource=admin
+
+          jwt_secret: "supersecret123"
+          
           AWS_REGION: "{{ aws_region }}"
+
           AWS_S3_BUCKET: "{{ s3_bucket }}"
+
         exposed_ports:
           - "5000"
 
@@ -223,9 +253,13 @@
 
     - name: Build RepairHub frontend Docker image
       community.docker.docker_image:
+
         name: repairhub-frontend
+
         tag: latest
+
         source: build
+
         build:
           path: "{{ app_dir }}/frontend"
 
@@ -236,18 +270,59 @@
 
     - name: Start RepairHub frontend container
       community.docker.docker_container:
+
         name: "{{ frontend_container }}"
+
         image: "repairhub-frontend:latest"
+
         state: started
+
         restart_policy: unless-stopped
+
         networks:
           - name: "{{ docker_network }}"
-        published_ports:
-          - "80:80"
+
+        exposed_ports:
+          - "80"
 
 
     # ==================================================
-    # 17. CHECK RUNNING CONTAINERS
+    # 17. REMOVE OLD NGINX CONTAINER
+    # ==================================================
+
+    - name: Remove existing Nginx container
+      community.docker.docker_container:
+        name: "{{ nginx_container }}"
+        state: absent
+
+
+    # ==================================================
+    # 18. START NGINX
+    # ==================================================
+
+    - name: Start Nginx reverse proxy
+      community.docker.docker_container:
+
+        name: "{{ nginx_container }}"
+
+        image: "nginx:alpine"
+
+        state: started
+
+        restart_policy: unless-stopped
+
+        networks:
+          - name: "{{ docker_network }}"
+
+        published_ports:
+          - "80:80"
+
+        volumes:
+          - "{{ app_dir }}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
+
+
+    # ==================================================
+    # 19. CHECK RUNNING CONTAINERS
     # ==================================================
 
     - name: Check Docker containers
@@ -258,7 +333,7 @@
 
 
     # ==================================================
-    # 18. DISPLAY RUNNING CONTAINERS
+    # 20. DISPLAY RUNNING CONTAINERS
     # ==================================================
 
     - name: Display running Docker containers

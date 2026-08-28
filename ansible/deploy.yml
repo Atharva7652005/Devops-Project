@@ -44,6 +44,13 @@
     s3_bucket: "repairhub-s3-bucket"
 
 
+    # ==================================================
+    # AUTHENTICATION
+    # ==================================================
+
+    jwt_secret: "supersecret123"
+
+
   tasks:
 
     # ==================================================
@@ -225,8 +232,8 @@
           MONGO_URI: >-
             mongodb://{{ mongo_username }}:{{ mongo_password }}@{{ mongo_container }}:27017/{{ mongo_database }}?authSource=admin
 
-          jwt_secret: "supersecret123"
-          
+          JWT_SECRET: "{{ jwt_secret }}"
+
           AWS_REGION: "{{ aws_region }}"
 
           AWS_S3_BUCKET: "{{ s3_bucket }}"

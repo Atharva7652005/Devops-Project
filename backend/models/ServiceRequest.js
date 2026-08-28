@@ -23,6 +23,11 @@ const serviceRequestSchema = mongoose.Schema(
       type: Date,
       required: true,
     },
+    requestedMaximumCharge: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     images: {
       type: [String],
       default: [],
@@ -38,7 +43,7 @@ const serviceRequestSchema = mongoose.Schema(
     },
     technician: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Technician',
+      ref: 'User',
       default: null,
     },
     estimatedCost: {
@@ -62,6 +67,34 @@ const serviceRequestSchema = mongoose.Schema(
         reason: { type: String },
         status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
         dateRequested: { type: Date, default: Date.now }
+      }
+    ],
+    statusLog: [
+      {
+        status: { type: String, required: true },
+        date: { type: Date, default: Date.now }
+      }
+    ],
+    quotedCost: {
+      type: Number,
+    },
+    quotationStatus: {
+      type: String,
+      enum: ['Pending', 'Approved', 'Declined', 'Not Required'],
+      default: 'Not Required',
+    },
+    warrantyEndDate: {
+      type: Date,
+    },
+    estimatedArrival: {
+      type: String, // e.g. "14:30" or "Between 2 PM and 4 PM"
+    },
+    technicianResponses: [
+      {
+        technicianId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        status: { type: String, enum: ['Confirmed', 'Rejected'] },
+        basePrice: { type: Number },
+        date: { type: Date, default: Date.now }
       }
     ],
   },

@@ -18,7 +18,7 @@ const userSchema = mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['customer', 'admin'],
+      enum: ['customer', 'admin', 'technician'],
       default: 'customer',
     },
     phone: {
@@ -44,6 +44,15 @@ const userSchema = mongoose.Schema(
     isBlocked: {
       type: Boolean,
       default: false,
+    },
+    // Technician-specific fields
+    specialization: {
+      type: String,
+      default: '',
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true,
     },
   },
   {

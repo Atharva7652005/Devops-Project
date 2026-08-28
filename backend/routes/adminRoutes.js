@@ -8,14 +8,22 @@ const {
   deleteAdminNote,
   getUsers,
   updateUser,
-  deleteUser
+  deleteUser,
+  getAnalytics,
+  autoAssignRequest,
+  assignTechnicianBid
 } = require('../controllers/adminController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // Requests
 router.route('/requests').get(protect, adminOnly, getAllRequests);
 router.route('/requests/:id/status').put(protect, adminOnly, updateRequestStatus);
+router.route('/requests/:id/auto-assign').post(protect, adminOnly, autoAssignRequest);
+router.route('/requests/:id/assign-bid').post(protect, adminOnly, assignTechnicianBid);
 router.route('/requests/:id').delete(protect, adminOnly, deleteAnyRequest);
+
+// Analytics
+router.route('/analytics').get(protect, adminOnly, getAnalytics);
 
 // Internal Notes
 router.route('/requests/:id/notes').post(protect, adminOnly, addAdminNote);

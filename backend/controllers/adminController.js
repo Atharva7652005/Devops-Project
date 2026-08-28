@@ -1,6 +1,12 @@
 const asyncHandler = require('express-async-handler');
 const ServiceRequest = require('../models/ServiceRequest');
 const User = require('../models/User');
+const Review = require('../models/Review');
+const Payment = require('../models/Payment');
+const Notification = require('../models/Notification');
+const Message = require('../models/Message');
+const AuditLog = require('../models/AuditLog');
+
 
 // --- REQUEST MANAGEMENT ---
 
@@ -16,7 +22,8 @@ const getAllRequests = asyncHandler(async (req, res) => {
 
   const requests = await ServiceRequest.find(filter)
     .populate('user', 'id name email phone address city pincode isBlocked')
-    .populate('technician', 'name specialization contactInfo')
+    .populate('technician', 'name specialization phone') // Changed contactInfo to phone since it's User model
+    .populate('technicianResponses.technicianId', 'name phone')
     .sort({ createdAt: -1 });
 
   res.json(requests);
@@ -102,6 +109,96 @@ const deleteAdminNote = asyncHandler(async (req, res) => {
 });
 
 
+
+// --- ANALYTICS ---
+// @desc    Get dashboard analytics
+// @route   GET /api/admin/analytics
+// @access  Private/Admin
+const getAnalytics = asyncHandler(async (req, res) => {
+  const totalRevenueAggr = await ServiceRequest.aggregate([
+    { $match: { status: 'Completed' } },
+    { $group: { _id: null, total: { $sum: '$estimatedCost' } } }
+  ]);
+  const totalRevenue = totalRevenueAggr.length > 0 ? totalRevenueAggr[0].total : 0;
+
+  const categoryAggr = await ServiceRequest.aggregate([
+    { $group: { _id: '$category', count: { $sum: 1 } } }
+  ]);
+  
+  const techPerformance = await ServiceRequest.aggregate([
+    { $match: { status: 'Completed', technician: { $ne: null } } },
+    { $group: { _id: '$technician', completed: { $sum: 1 } } }
+  ]);
+
+  res.json({ totalRevenue, requestsByCategory: categoryAggr, techPerformance });
+});
+
+// --- SMART ASSIGN ---
+// @desc    Auto-assign request to best available technician
+// @route   POST /api/admin/requests/:id/auto-assign
+// @access  Private/Admin
+const autoAssignRequest = asyncHandler(async (req, res) => {
+  const request = await ServiceRequest.findById(req.params.id);
+  if (!request) {
+    res.status(404);
+    throw new Error('Request not found');
+  }
+
+  // Find all available technicians with matching specialization
+  const technicians = await User.find({
+    role: 'technician',
+    isAvailable: true,
+    specialization: request.category
+  });
+
+  if (technicians.length === 0) {
+    res.status(400);
+    throw new Error('No available technicians matching this category.');
+  }
+
+  // Pick the first available one (can be enhanced to check workload)
+  const bestTech = technicians[0];
+
+  request.technician = bestTech._id;
+  request.assignedTechnician = bestTech.name;
+  request.status = 'Scheduled';
+  request.statusLog.push({ status: 'Scheduled', date: new Date() });
+  
+  await request.save();
+
+  res.json({ message: `Assigned to ${bestTech.name}`, request });
+});
+
+// --- ASSIGN TECHNICIAN BID ---
+// @desc    Assign a technician based on their bid response
+// @route   POST /api/admin/requests/:id/assign-bid
+// @access  Private/Admin
+const assignTechnicianBid = asyncHandler(async (req, res) => {
+  const request = await ServiceRequest.findById(req.params.id);
+  if (!request) {
+    res.status(404);
+    throw new Error('Request not found');
+  }
+
+  const { technicianId, basePrice } = req.body;
+
+  const techUser = await User.findById(technicianId);
+  if (!techUser || techUser.role !== 'technician') {
+    res.status(404);
+    throw new Error('Technician not found');
+  }
+
+  request.technician = techUser._id;
+  request.assignedTechnician = techUser.name;
+  request.estimatedCost = basePrice;
+  request.status = 'Scheduled';
+  request.statusLog.push({ status: 'Scheduled', date: new Date() });
+
+  await request.save();
+
+  res.json({ message: `Assigned to ${techUser.name}`, request });
+});
+
 // --- USER MANAGEMENT ---
 
 // @desc    Get all users
@@ -143,10 +240,29 @@ const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
   if (user) {
-    await user.deleteOne();
-    // Optional: Delete their requests too, or keep them for records. We'll delete for cleanliness.
+    // 1. Log the deletion
+    await AuditLog.create({
+      action: 'CUSTOMER_DELETED',
+      adminId: req.user._id,
+      details: {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+    // 2. Cascade delete
     await ServiceRequest.deleteMany({ user: user._id });
-    res.json({ message: 'User removed' });
+    await Payment.deleteMany({ user: user._id });
+    await Review.deleteMany({ user: user._id });
+    await Notification.deleteMany({ user: user._id });
+    await Message.deleteMany({ $or: [{ sender: user._id }, { receiver: user._id }] });
+
+    // 3. Delete user
+    await user.deleteOne();
+    
+    res.json({ message: 'User and all related data removed' });
   } else {
     res.status(404);
     throw new Error('User not found');
@@ -162,4 +278,7 @@ module.exports = {
   getUsers,
   updateUser,
   deleteUser,
+  getAnalytics,
+  autoAssignRequest,
+  assignTechnicianBid,
 };

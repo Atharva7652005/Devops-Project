@@ -1,23 +1,31 @@
 const asyncHandler = require('express-async-handler');
+const { uploadToS3 } = require('../utils/s3Upload');
 const ServiceRequest = require('../models/ServiceRequest');
 const Review = require('../models/Review');
+const socket = require('../config/socket');
 
 // @desc    Create new service request
 // @route   POST /api/requests
 // @access  Private (Customer)
 const createRequest = asyncHandler(async (req, res) => {
-  const { category, title, description, preferredDate } = req.body;
+  const { category, title, description, preferredDate, requestedMaximumCharge } = req.body;
 
-  if (!category || !title || !description || !preferredDate) {
+  if (!category || !title || !description || !preferredDate || !requestedMaximumCharge) {
     res.status(400);
     throw new Error('Please provide all required fields');
   }
 
   const attachments = [];
   if (req.files && req.files.length > 0) {
-    req.files.forEach(file => {
-      attachments.push(`/uploads/${file.filename}`);
-    });
+    try {
+      const uploadPromises = req.files.map(file => uploadToS3(file));
+      const s3Urls = await Promise.all(uploadPromises);
+      attachments.push(...s3Urls);
+    } catch (err) {
+      console.error('Error uploading files to S3:', err);
+      res.status(500);
+      throw new Error('Failed to upload attachments to S3');
+    }
   }
 
   const request = new ServiceRequest({
@@ -26,10 +34,23 @@ const createRequest = asyncHandler(async (req, res) => {
     title,
     description,
     preferredDate,
+    requestedMaximumCharge,
     attachments,
   });
 
   const createdRequest = await request.save();
+
+  // Populate user info so the technician UI has it right away
+  await createdRequest.populate('user', 'name city pincode');
+
+  // Emit event to all technicians (in real app, we might room them by category)
+  try {
+    const io = socket.getIO();
+    io.emit('new_request', createdRequest);
+  } catch (err) {
+    console.error('Socket error emitting new_request:', err);
+  }
+
   res.status(201).json(createdRequest);
 });
 
@@ -194,11 +215,17 @@ const uploadAttachment = asyncHandler(async (req, res) => {
     throw new Error('No file uploaded');
   }
 
-  const fileUrl = `/uploads/${req.file.filename}`;
-  request.attachments.push(fileUrl);
-  
-  await request.save();
-  res.status(201).json({ message: 'Attachment uploaded', url: fileUrl });
+  try {
+    const fileUrl = await uploadToS3(req.file);
+    request.attachments.push(fileUrl);
+    
+    await request.save();
+    res.status(201).json({ message: 'Attachment uploaded', url: fileUrl });
+  } catch (err) {
+    console.error('S3 upload error:', err);
+    res.status(500);
+    throw new Error('Failed to upload file to S3');
+  }
 });
 
 // @desc    Remove attachment from request
@@ -226,7 +253,43 @@ const removeAttachment = asyncHandler(async (req, res) => {
   request.attachments = request.attachments.filter((attachment) => attachment !== url);
   await request.save();
   
-  res.json({ message: 'Attachment removed' });
+  res.json({ message: 'Attachment reference removed' });
+});
+
+// @desc    Approve or decline a quotation
+// @route   PUT /api/requests/:id/quotation
+// @access  Private (Customer)
+const updateQuotationStatus = asyncHandler(async (req, res) => {
+  const { quotationStatus } = req.body;
+  const request = await ServiceRequest.findById(req.params.id);
+
+  if (!request) {
+    res.status(404);
+    throw new Error('Request not found');
+  }
+
+  if (request.user.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized');
+  }
+
+  // quotationStatus comes from frontend (Approved or Declined)
+  if (!['Approved', 'Declined'].includes(quotationStatus)) {
+    res.status(400);
+    throw new Error('Invalid quotation status');
+  }
+
+  request.quotationStatus = quotationStatus;
+  
+  if (quotationStatus === 'Approved') {
+    // Optionally move to scheduled or keep pending, according to business logic.
+    // The previous frontend might just update the field.
+  } else if (quotationStatus === 'Declined') {
+    request.status = 'Cancelled';
+  }
+
+  const updatedRequest = await request.save();
+  res.json(updatedRequest);
 });
 
 module.exports = {
@@ -238,4 +301,5 @@ module.exports = {
   rescheduleRequest,
   uploadAttachment,
   removeAttachment,
+  updateQuotationStatus,
 };

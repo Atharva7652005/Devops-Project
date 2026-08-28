@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import TechnicianDashboard from './pages/technician/TechnicianDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import OperationsCenter from './pages/OperationsCenter';
 
@@ -30,6 +31,11 @@ function App() {
               {/* Admin Routes */}
               <Route element={<ProtectedRoute adminOnly={true} />}>
                 <Route path="/admin" element={<AdminDashboard />} />
+              </Route>
+
+              {/* Technician Routes */}
+              <Route element={<ProtectedRoute technicianOnly={true} />}>
+                <Route path="/technician-dashboard" element={<TechnicianDashboard />} />
               </Route>
             </Routes>
           </main>

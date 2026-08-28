@@ -2,7 +2,7 @@ import { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
-const ProtectedRoute = ({ adminOnly = false, allowAdmin = false }) => {
+const ProtectedRoute = ({ adminOnly = false, allowAdmin = false, technicianOnly = false }) => {
   const { user, loading } = useContext(AuthContext);
 
   if (loading) {
@@ -18,11 +18,19 @@ const ProtectedRoute = ({ adminOnly = false, allowAdmin = false }) => {
   }
 
   if (adminOnly && user.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={user.role === 'technician' ? "/technician-dashboard" : "/dashboard"} replace />;
   }
 
-  if (!adminOnly && !allowAdmin && user.role === 'admin') {
+  if (technicianOnly && user.role !== 'technician') {
+    return <Navigate to={user.role === 'admin' ? "/admin" : "/dashboard"} replace />;
+  }
+
+  if (!adminOnly && !technicianOnly && !allowAdmin && user.role === 'admin') {
     return <Navigate to="/admin" replace />;
+  }
+
+  if (!adminOnly && !technicianOnly && user.role === 'technician') {
+    return <Navigate to="/technician-dashboard" replace />;
   }
 
   return <Outlet />;

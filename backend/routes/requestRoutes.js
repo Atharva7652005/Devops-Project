@@ -10,19 +10,13 @@ const {
   createReview,
   rescheduleRequest,
   uploadAttachment,
-  removeAttachment
+  removeAttachment,
+  updateQuotationStatus
 } = require('../controllers/requestController');
 const { protect } = require('../middleware/authMiddleware');
 
-// Multer config
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename(req, file, cb) {
-    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-  },
-});
+// Multer config for S3 memory buffer
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -42,5 +36,7 @@ router.route('/:id/reschedule').put(protect, rescheduleRequest);
 router.route('/:id/attachments')
   .post(protect, upload.single('attachment'), uploadAttachment)
   .delete(protect, removeAttachment);
+
+router.route('/:id/quotation').put(protect, updateQuotationStatus);
 
 module.exports = router;

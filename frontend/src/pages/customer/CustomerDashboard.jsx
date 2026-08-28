@@ -1,7 +1,8 @@
 import { useState, useEffect, useContext } from 'react';
 import axios from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
-import { Plus, X, Edit2, Trash2, Settings, AlertCircle, CheckCircle, Clock, Wrench, User, Star, Upload, Calendar } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, Settings, AlertCircle, CheckCircle, Clock, Wrench, User, Star, Upload, Calendar, MessageSquare, FileText, Check, Truck } from 'lucide-react';
+import ChatBox from '../../components/ChatBox';
 import '../../assets/css/dashboard.css';
 import '../../assets/css/profile.css';
 
@@ -20,9 +21,10 @@ const CustomerDashboard = () => {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedReqForAction, setSelectedReqForAction] = useState(null);
+  const [chatRequestId, setChatRequestId] = useState(null);
 
   // Form States
-  const [reqForm, setReqForm] = useState({ category: '', title: '', description: '', preferredDate: '', attachments: [] });
+  const [reqForm, setReqForm] = useState({ category: '', title: '', description: '', preferredDate: '', attachments: [], requestedMaximumCharge: '' });
   const [profileForm, setProfileForm] = useState({ name: '', phone: '', address: '', city: '', pincode: '', emailNotif: true, smsNotif: false });
   const [rescheduleForm, setRescheduleForm] = useState({ requestedDate: '', reason: '' });
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
@@ -54,9 +56,23 @@ const CustomerDashboard = () => {
       setLoading(true);
       await fetchCatalog();
       await fetchRequests();
+      try {
+        const profileRes = await axios.get('/users/profile');
+        if (profileRes.data) {
+          // Because user state might be stale in this closure, we update using a functional approach
+          // but updateUser in context doesn't support functional updates natively. 
+          // It's safe enough since it just runs once on mount to get the freshest db state.
+          updateUser({ ...(JSON.parse(localStorage.getItem('user')) || {}), ...profileRes.data });
+        }
+      } catch (err) {
+        console.error('Error fetching latest profile', err);
+      }
       setLoading(false);
     };
     initData();
+  }, []); // Run only on mount
+
+  useEffect(() => {
     if (user) {
       setProfileForm({
         name: user.name || '',
@@ -107,6 +123,9 @@ const CustomerDashboard = () => {
           formData.append('title', reqForm.title);
           formData.append('description', reqForm.description);
           formData.append('preferredDate', reqForm.preferredDate);
+          if (reqForm.requestedMaximumCharge) {
+            formData.append('requestedMaximumCharge', reqForm.requestedMaximumCharge);
+          }
           Array.from(reqForm.attachments).forEach(file => formData.append('attachments', file));
           await axios.post('/requests', formData);
         } else {
@@ -179,6 +198,20 @@ const CustomerDashboard = () => {
   };
 
 
+  const handleApproveQuotation = async (reqId) => {
+    try {
+      await axios.put(`/requests/${reqId}/quotation`, { quotationStatus: 'Approved' });
+      fetchRequests();
+      alert('Quotation approved. Repair will commence.');
+    } catch (err) { alert('Error approving quotation'); }
+  };
+  const handleDeclineQuotation = async (reqId) => {
+    try {
+      await axios.put(`/requests/${reqId}/quotation`, { quotationStatus: 'Declined' });
+      fetchRequests();
+    } catch (err) { alert('Error declining quotation'); }
+  };
+
   const getStatusClass = (status) => `status-badge status-${(status || '').replace(/\s+/g, '')}`;
   const getStatusIcon = (status) => {
     switch (status) {
@@ -206,6 +239,11 @@ const CustomerDashboard = () => {
               <User className="sidebar-icon" /> Profile & Settings
             </button>
           </li>
+          <li>
+            <button className={`sidebar-link ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')} style={{width: '100%', border: 'none', background: activeTab === 'history' ? 'var(--blue-50)' : 'transparent', textAlign: 'left'}}>
+              <FileText className="sidebar-icon" /> History & Vault
+            </button>
+          </li>
         </ul>
       </aside>
 
@@ -221,7 +259,7 @@ const CustomerDashboard = () => {
               <button 
                 onClick={() => {
                   setEditingRequest(null);
-                  setReqForm({ category: catalogOptions.length > 0 ? catalogOptions[0].name : '', title: '', description: '', preferredDate: '', attachments: [] });
+                  setReqForm({ category: catalogOptions.length > 0 ? catalogOptions[0].name : '', title: '', description: '', preferredDate: '', attachments: [], requestedMaximumCharge: '' });
                   setShowReqModal(true);
                 }}
                 className="btn btn-primary"
@@ -274,16 +312,27 @@ const CustomerDashboard = () => {
                             <div className="item-title">{req.title}</div>
                             <div className="item-category">{req.category}</div>
                           </td>
-                          <td style={{verticalAlign: 'top'}}>
-                            <span className={getStatusClass(req.status)}>{getStatusIcon(req.status)} {req.status}</span>
-                            {req.technician ? (
+                          <td style={{verticalAlign: 'top', width: '250px'}}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--blue-700)' }}>Status Timeline</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderLeft: '2px solid var(--blue-200)', paddingLeft: '8px', marginLeft: '4px' }}>
+                                {req.statusLog && req.statusLog.length > 0 ? req.statusLog.map((log, i) => (
+                                  <div key={i} style={{ fontSize: '0.75rem', color: i === req.statusLog.length - 1 ? 'var(--blue-800)' : 'var(--gray-500)', fontWeight: i === req.statusLog.length - 1 ? 600 : 400 }}>
+                                    • {log.status} <span style={{ fontSize: '0.65rem', marginLeft: '5px' }}>({new Date(log.date).toLocaleDateString()})</span>
+                                  </div>
+                                )) : (
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--blue-800)', fontWeight: 600 }}>• {req.status}</div>
+                                )}
+                              </div>
+                            </div>
+                            {req.technician && (
                               <div className="item-tech" style={{marginTop: '0.5rem', background: 'var(--blue-50)', padding: '0.5rem', borderRadius: '4px'}}>
                                 <div style={{fontWeight: 500, color: 'var(--blue-800)'}}>👨‍🔧 {req.technician.name}</div>
-                                <div style={{fontSize: '0.75rem', color: 'var(--gray-600)'}}>{req.technician.specialization}</div>
                                 <div style={{fontSize: '0.75rem', color: 'var(--gray-600)'}}>{req.technician.contactInfo}</div>
+                                {req.estimatedArrival && (
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--gold-600)', fontWeight: 600, marginTop: '2px' }}><Truck size={12} style={{display:'inline'}}/> ETA: {req.estimatedArrival}</div>
+                                )}
                               </div>
-                            ) : (
-                              <div className="item-tech" style={{marginTop: '0.5rem'}}>Tech: {req.assignedTechnician}</div>
                             )}
                           </td>
                           <td style={{verticalAlign: 'top'}}>
@@ -295,12 +344,26 @@ const CustomerDashboard = () => {
                             )}
                           </td>
                           <td style={{verticalAlign: 'top'}}>
-                            <div className="item-cost">₹{req.estimatedCost || '0'}</div>
+                            <div className="item-cost">₹{req.quotedCost || req.estimatedCost || '0'}</div>
+                            {req.quotationStatus === 'Pending' && (
+                              <div style={{ marginTop: '0.5rem', background: '#fff3cd', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ffe69c' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#664d03', marginBottom: '5px' }}>Quotation requires approval</div>
+                                <div style={{ display: 'flex', gap: '5px' }}>
+                                  <button onClick={() => handleApproveQuotation(req._id)} style={{ flex: 1, background: '#198754', color: '#fff', border: 'none', padding: '2px 5px', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer' }}><Check size={10} style={{display:'inline'}}/> Approve</button>
+                                  <button onClick={() => handleDeclineQuotation(req._id)} style={{ flex: 1, background: '#dc3545', color: '#fff', border: 'none', padding: '2px 5px', fontSize: '0.7rem', borderRadius: '3px', cursor: 'pointer' }}><X size={10} style={{display:'inline'}}/> Decline</button>
+                                </div>
+                              </div>
+                            )}
+                            {['Approved', 'Declined'].includes(req.quotationStatus) && (
+                              <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: req.quotationStatus === 'Approved' ? 'green' : 'red', fontWeight: 500 }}>
+                                Quote {req.quotationStatus}
+                              </div>
+                            )}
                           </td>
                           <td style={{verticalAlign: 'top'}}>
                             {req.attachments?.map((att, i) => (
                               <div key={i} style={{fontSize: '0.75rem', marginBottom: '0.25rem'}}>
-                                <a href={`http://localhost:5000${att}`} target="_blank" className="attachment-link">File {i+1}</a>
+                                <a href={att.startsWith('http') ? att : `http://localhost:5000${att}`} target="_blank" className="attachment-link">File {i+1}</a>
                                 {req.status === 'Pending' && (
                                   <button onClick={() => handleRemoveAttachment(req._id, att)} style={{color: 'red', marginLeft: '0.5rem'}}>x</button>
                                 )}
@@ -315,6 +378,8 @@ const CustomerDashboard = () => {
                           </td>
                           <td style={{verticalAlign: 'top', textAlign: 'right'}}>
                             <div className="item-actions">
+                              <button onClick={() => setChatRequestId(req._id)} className="action-btn" title="Message"><MessageSquare size={16} /></button>
+                              
                               {req.status === 'Pending' && (
                                 <>
                                   <button onClick={() => {
@@ -323,7 +388,7 @@ const CustomerDashboard = () => {
                                     try {
                                       dateStr = req.preferredDate ? new Date(req.preferredDate).toISOString().split('T')[0] : '';
                                     } catch (e) {}
-                                    setReqForm({ category: req.category, title: req.title, description: req.description, preferredDate: dateStr, attachments: [] });
+                                    setReqForm({ category: req.category, title: req.title, description: req.description, preferredDate: dateStr, attachments: [], requestedMaximumCharge: req.requestedMaximumCharge || '' });
                                     setShowReqModal(true);
                                   }} className="action-btn" title="Edit"><Edit2 size={16} /></button>
                                   
@@ -422,6 +487,68 @@ const CustomerDashboard = () => {
             </div>
           </div>
         )}
+
+        {activeTab === 'history' && (
+          <div className="card">
+            <div className="data-table-header">
+              <h2 className="data-table-title"><FileText size={20} className="admin-table-title-icon" /> Service History & Vault</h2>
+            </div>
+            
+            {loading ? (
+              <div className="empty-state"><div className="spinner spinner-lg mx-auto"></div></div>
+            ) : requests.filter(r => r.status === 'Completed').length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon"><FileText size={24} /></div>
+                <h3 className="empty-title">No completed requests</h3>
+                <p>Your service history and invoices will appear here.</p>
+              </div>
+            ) : (
+              <div className="data-table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Service Details</th>
+                      <th>Completion Date</th>
+                      <th>Warranty Status</th>
+                      <th style={{ textAlign: 'right' }}>Documents</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requests.filter(r => r.status === 'Completed').map((req) => (
+                      <tr key={req._id}>
+                        <td>
+                          <div className="item-title">{req.title}</div>
+                          <div className="item-category">{req.category}</div>
+                          <div className="item-tech" style={{marginTop:'4px'}}>👨‍🔧 Tech: {req.technician?.name || req.assignedTechnician}</div>
+                        </td>
+                        <td>
+                          {req.statusLog?.find(l => l.status === 'Completed')?.date 
+                            ? new Date(req.statusLog.find(l => l.status === 'Completed').date).toLocaleDateString() 
+                            : new Date(req.updatedAt).toLocaleDateString()}
+                        </td>
+                        <td>
+                          {req.warrantyEndDate ? (
+                            new Date(req.warrantyEndDate) > new Date() ? (
+                              <span style={{ color: 'green', fontWeight: 600 }}>Active until {new Date(req.warrantyEndDate).toLocaleDateString()}</span>
+                            ) : (
+                              <span style={{ color: 'red', fontWeight: 600 }}>Expired on {new Date(req.warrantyEndDate).toLocaleDateString()}</span>
+                            )
+                          ) : (
+                            <span style={{ color: 'var(--gray-500)' }}>No active warranty</span>
+                          )}
+                        </td>
+                        <td style={{textAlign: 'right'}}>
+                           {/* Re-using the admin logic, just stubbing out the download for now, or it could call an API */}
+                           <button className="btn btn-primary" onClick={() => alert('Invoice PDF Download Started... (Requires Admin receipt component logic)')}><FileText size={14} style={{display:'inline', marginRight:'4px'}}/> Download Invoice</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Request Modal */}
@@ -465,6 +592,10 @@ const CustomerDashboard = () => {
                 <div>
                   <label className="label-text">Preferred Date</label>
                   <input type="date" className="input-field" value={reqForm.preferredDate} onChange={e => setReqForm({...reqForm, preferredDate: e.target.value})} required />
+                </div>
+                <div>
+                  <label className="label-text">Requested Maximum Charge (₹)</label>
+                  <input type="number" className="input-field" placeholder="e.g. 500" value={reqForm.requestedMaximumCharge} onChange={e => setReqForm({...reqForm, requestedMaximumCharge: e.target.value})} required />
                 </div>
                 <div className="modal-footer">
                   <button type="button" onClick={() => setShowReqModal(false)} className="btn-cancel">Cancel</button>
@@ -527,6 +658,21 @@ const CustomerDashboard = () => {
                   <button type="submit" className="btn btn-primary">Submit Review</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Modal */}
+      {chatRequestId && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{maxWidth: '500px', padding: 0}}>
+            <div className="modal-header" style={{ borderBottom: 'none', padding: '1rem', background: 'var(--blue-600)', color: '#fff', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
+              <h3 className="modal-title" style={{color: '#fff'}}>Support Chat</h3>
+              <button onClick={() => setChatRequestId(null)} className="modal-close" style={{color: '#fff'}}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ padding: 0 }}>
+              <ChatBox requestId={chatRequestId} />
             </div>
           </div>
         </div>

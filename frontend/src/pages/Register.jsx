@@ -8,14 +8,34 @@ const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('customer');
+  const [specialization, setSpecialization] = useState('');
+  const [customSpecialization, setCustomSpecialization] = useState('');
+  const [phone, setPhone] = useState('');
   const { register, error } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await register(name, email, password);
-      navigate('/dashboard');
+      const finalSpecialization = specialization === 'Other' ? customSpecialization : specialization;
+      
+      const userData = {
+        name,
+        email,
+        password,
+        role,
+        specialization: role === 'technician' ? finalSpecialization : undefined,
+        phone: role === 'technician' ? phone : undefined
+      };
+      
+      const user = await register(userData);
+      
+      if (user.role === 'technician') {
+        navigate('/technician-dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       // Error handled in context
     }
@@ -88,6 +108,70 @@ const Register = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+
+          <div>
+            <label className="label-text" htmlFor="role">I want to register as a</label>
+            <select 
+              id="role" 
+              className="input-field" 
+              value={role} 
+              onChange={(e) => setRole(e.target.value)}
+            >
+              <option value="customer">Customer</option>
+              <option value="technician">Technician</option>
+            </select>
+          </div>
+
+          {role === 'technician' && (
+            <div style={{ padding: '1rem', background: 'var(--gray-50)', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="label-text" htmlFor="phone">Phone Number</label>
+                <input
+                  id="phone"
+                  type="text"
+                  required
+                  className="input-field"
+                  placeholder="e.g. 9876543210"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="label-text" htmlFor="specialization">Technician Type</label>
+                <select 
+                  id="specialization" 
+                  className="input-field" 
+                  value={specialization} 
+                  onChange={(e) => setSpecialization(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>Select specialization...</option>
+                  <option value="Electrician">Electrician</option>
+                  <option value="Plumber">Plumber</option>
+                  <option value="Mechanic">Mechanic</option>
+                  <option value="Carpenter">Carpenter</option>
+                  <option value="Appliance Repair">Appliance Repair</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {specialization === 'Other' && (
+                <div>
+                  <label className="label-text" htmlFor="customSpecialization">Specify Your Type</label>
+                  <input
+                    id="customSpecialization"
+                    type="text"
+                    required
+                    className="input-field"
+                    placeholder="e.g. HVAC Specialist"
+                    value={customSpecialization}
+                    onChange={(e) => setCustomSpecialization(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <button type="submit" className="btn btn-secondary auth-submit-btn">
             Sign up

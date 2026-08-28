@@ -6,11 +6,16 @@ const generateToken = require('../utils/generateToken');
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role, specialization, phone } = req.body;
 
   if (!name || !email || !password) {
     res.status(400);
-    throw new Error('Please include all fields');
+    throw new Error('Please include all required fields');
+  }
+
+  if (role === 'technician' && !specialization) {
+    res.status(400);
+    throw new Error('Technicians must provide a specialization');
   }
 
   // Check if user exists
@@ -26,6 +31,9 @@ const registerUser = asyncHandler(async (req, res) => {
     name,
     email,
     password,
+    role: role || 'customer',
+    specialization: role === 'technician' ? specialization : undefined,
+    phone: phone || undefined,
   });
 
   if (user) {
@@ -33,7 +41,14 @@ const registerUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      city: user.city,
+      pincode: user.pincode,
+      notifications: user.notifications,
       role: user.role,
+      specialization: user.specialization,
       token: generateToken(user._id),
     });
   } else {
@@ -55,7 +70,14 @@ const loginUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      city: user.city,
+      pincode: user.pincode,
+      notifications: user.notifications,
       role: user.role,
+      specialization: user.specialization,
       token: generateToken(user._id),
     });
   } else {

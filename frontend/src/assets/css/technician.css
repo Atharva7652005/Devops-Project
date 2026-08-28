@@ -1,0 +1,163 @@
+/* Technician Dashboard Specific Styles */
+
+.tech-job-card {
+  border: 1px solid var(--gray-200);
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.tech-job-card:hover {
+  box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+  border-color: var(--blue-300);
+  transform: translateY(-2px);
+}
+
+.tech-job-card.responded {
+  background: var(--gray-50);
+  border-color: var(--gray-200);
+  opacity: 0.85;
+}
+
+.tech-job-card.responded:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.tech-job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.tech-job-title {
+  margin: 0;
+  color: var(--blue-900);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.tech-job-desc {
+  color: var(--gray-600);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.tech-job-meta {
+  display: flex;
+  gap: 2rem;
+  font-size: 0.875rem;
+  color: var(--gray-700);
+  margin-bottom: 1.5rem;
+  background: var(--gray-50);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.tech-job-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tech-bidding-section {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  background: var(--blue-50);
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px dashed var(--blue-300);
+}
+
+.tech-bidding-label {
+  font-weight: 600;
+  color: var(--blue-900);
+}
+
+.tech-bidding-input {
+  width: 150px;
+  margin: 0 !important;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--gray-300);
+}
+
+.tech-schedule-card {
+  border: 1px solid var(--blue-200);
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #fff;
+  border-left: 5px solid var(--blue-600);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.tech-schedule-card:hover {
+  box-shadow: 0 8px 12px rgba(0,0,0,0.08);
+}
+
+.tech-customer-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  background: var(--gray-50);
+  padding: 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--gray-100);
+}
+
+.tech-customer-details h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--gray-500);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tech-customer-details p {
+  margin: 0.25rem 0;
+  color: var(--gray-800);
+}
+
+.tech-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--gray-100);
+  padding-top: 1rem;
+}
+
+.tech-response-box {
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tech-response-confirmed {
+  background: var(--green-50);
+  border: 1px solid var(--green-200);
+  color: var(--green-800);
+}
+
+.tech-response-rejected {
+  background: var(--red-50);
+  border: 1px solid var(--red-200);
+  color: var(--red-800);
+}
+
+/* Empty states */
+.tech-empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  background: var(--gray-50);
+  border-radius: 12px;
+  border: 1px dashed var(--gray-300);
+  color: var(--gray-500);
+}

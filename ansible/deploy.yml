@@ -1,0 +1,266 @@
+---
+- name: Deploy RepairHub MERN Application
+  hosts: web
+  become: true
+
+  vars:
+    # ==================================================
+    # APPLICATION
+    # ==================================================
+
+    app_dir: /opt/repairhub
+    repo_url: "https://github.com/Atharva7652005/Devops-Project.git"
+    branch: main
+
+
+    # ==================================================
+    # DOCKER
+    # ==================================================
+
+    docker_network: repairhub-network
+    mongo_container: repairhub-mongodb
+    backend_container: repairhub-backend
+    frontend_container: repairhub-frontend
+    mongo_volume: repairhub-mongo-data
+
+
+    # ==================================================
+    # MONGODB
+    # ==================================================
+
+    mongo_username: "repairhub"
+    mongo_password: "123456"
+    mongo_database: "repairhub"
+
+
+    # ==================================================
+    # AWS S3
+    # ==================================================
+
+    aws_region: "ap-south-1"
+    s3_bucket: "repairhub-s3-bucket"
+
+
+  tasks:
+
+    # ==================================================
+    # 1. UPDATE APT
+    # ==================================================
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+
+    # ==================================================
+    # 2. INSTALL REQUIRED PACKAGES
+    # ==================================================
+
+    - name: Install Docker and Git
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - git
+        state: present
+
+
+    # ==================================================
+    # 3. START DOCKER
+    # ==================================================
+
+    - name: Start Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+
+    # ==================================================
+    # 4. ADD UBUNTU USER TO DOCKER GROUP
+    # ==================================================
+
+    - name: Add ubuntu user to docker group
+      ansible.builtin.user:
+        name: ubuntu
+        groups: docker
+        append: true
+
+
+    # ==================================================
+    # 5. CREATE APPLICATION DIRECTORY
+    # ==================================================
+
+    - name: Create RepairHub application directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+
+    # ==================================================
+    # 6. CLONE REPAIRHUB FROM GITHUB
+    # ==================================================
+
+    - name: Clone RepairHub repository
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ branch }}"
+        force: true
+
+
+    # ==================================================
+    # 7. CREATE DOCKER NETWORK
+    # ==================================================
+
+    - name: Create RepairHub Docker network
+      community.docker.docker_network:
+        name: "{{ docker_network }}"
+        state: present
+
+
+    # ==================================================
+    # 8. CREATE MONGODB VOLUME
+    # ==================================================
+
+    - name: Create MongoDB persistent volume
+      community.docker.docker_volume:
+        name: "{{ mongo_volume }}"
+        state: present
+
+
+    # ==================================================
+    # 9. REMOVE OLD MONGODB CONTAINER
+    # ==================================================
+
+    - name: Remove existing MongoDB container
+      community.docker.docker_container:
+        name: "{{ mongo_container }}"
+        state: absent
+
+
+    # ==================================================
+    # 10. START MONGODB
+    # ==================================================
+
+    - name: Start MongoDB container
+      community.docker.docker_container:
+        name: "{{ mongo_container }}"
+        image: "mongo:8"
+        state: started
+        restart_policy: unless-stopped
+        networks:
+          - name: "{{ docker_network }}"
+        volumes:
+          - "{{ mongo_volume }}:/data/db"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: "{{ mongo_username }}"
+          MONGO_INITDB_ROOT_PASSWORD: "{{ mongo_password }}"
+
+
+    # ==================================================
+    # 11. REMOVE OLD BACKEND CONTAINER
+    # ==================================================
+
+    - name: Remove existing backend container
+      community.docker.docker_container:
+        name: "{{ backend_container }}"
+        state: absent
+
+
+    # ==================================================
+    # 12. BUILD BACKEND IMAGE
+    # ==================================================
+
+    - name: Build RepairHub backend Docker image
+      community.docker.docker_image:
+        name: repairhub-backend
+        tag: latest
+        source: build
+        build:
+          path: "{{ app_dir }}/backend"
+
+
+    # ==================================================
+    # 13. START BACKEND
+    # ==================================================
+
+    - name: Start RepairHub backend container
+      community.docker.docker_container:
+        name: "{{ backend_container }}"
+        image: "repairhub-backend:latest"
+        state: started
+        restart_policy: unless-stopped
+        networks:
+          - name: "{{ docker_network }}"
+        env:
+          NODE_ENV: "production"
+          PORT: "5000"
+          MONGO_URI: >-
+            mongodb://{{ mongo_username }}:{{ mongo_password }}@{{ mongo_container }}:27017/{{ mongo_database }}?authSource=admin
+          AWS_REGION: "{{ aws_region }}"
+          AWS_S3_BUCKET: "{{ s3_bucket }}"
+        exposed_ports:
+          - "5000"
+
+
+    # ==================================================
+    # 14. REMOVE OLD FRONTEND CONTAINER
+    # ==================================================
+
+    - name: Remove existing frontend container
+      community.docker.docker_container:
+        name: "{{ frontend_container }}"
+        state: absent
+
+
+    # ==================================================
+    # 15. BUILD FRONTEND IMAGE
+    # ==================================================
+
+    - name: Build RepairHub frontend Docker image
+      community.docker.docker_image:
+        name: repairhub-frontend
+        tag: latest
+        source: build
+        build:
+          path: "{{ app_dir }}/frontend"
+
+
+    # ==================================================
+    # 16. START FRONTEND
+    # ==================================================
+
+    - name: Start RepairHub frontend container
+      community.docker.docker_container:
+        name: "{{ frontend_container }}"
+        image: "repairhub-frontend:latest"
+        state: started
+        restart_policy: unless-stopped
+        networks:
+          - name: "{{ docker_network }}"
+        published_ports:
+          - "80:80"
+
+
+    # ==================================================
+    # 17. CHECK RUNNING CONTAINERS
+    # ==================================================
+
+    - name: Check Docker containers
+      ansible.builtin.command:
+        cmd: docker ps
+      register: docker_ps
+      changed_when: false
+
+
+    # ==================================================
+    # 18. DISPLAY RUNNING CONTAINERS
+    # ==================================================
+
+    - name: Display running Docker containers
+      ansible.builtin.debug:
+        var: docker_ps.stdout
